@@ -1,0 +1,12 @@
+add yolo folder to mysite
+in this yolo folder add :
+ - my_model.pt
+ - __init__ (khawi)
+ 
+install :pip install ultralytics
+pip install opencv-python
+
+python manage.py shell > 
+from ultralytics import YOLO
+model = YOLO("mysite/yolo/my_model.pt")
+print("Model loaded successfully!")
