@@ -1,10 +1,185 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>YOLO Live Detection</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedScan — Medicine Detector</title>
+  <style>
+    :root {
+      --navy: #071827;
+      --panel: #0d2538;
+      --panel-light: #12344b;
+      --green: #45d3a1;
+      --green-soft: #a8efcf;
+      --blue: #55a8ef;
+      --text: #eef9f7;
+      --muted: #9eb6c4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 10%, rgba(69, 211, 161, .12), transparent 28%),
+        linear-gradient(145deg, #061520 0%, #091e2d 58%, #0a2638 100%);
+    }
+    header {
+      height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4%;
+      border-bottom: 1px solid rgba(168, 239, 207, .1);
+      background: rgba(7, 24, 39, .82);
+      backdrop-filter: blur(12px);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      width: 42px; height: 42px; border-radius: 12px;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, var(--green), #238c79);
+      box-shadow: 0 8px 30px rgba(69, 211, 161, .18);
+      font-size: 24px;
+    }
+    .brand strong { display: block; letter-spacing: .5px; }
+    .brand span { color: var(--muted); font-size: 12px; }
+    .live-badge {
+      padding: 8px 12px; border: 1px solid rgba(69, 211, 161, .28);
+      border-radius: 999px; color: var(--green-soft); font-size: 13px;
+      background: rgba(69, 211, 161, .08);
+    }
+    .live-dot { width: 8px; height: 8px; display: inline-block; border-radius: 50%; background: var(--green); margin-right: 7px; box-shadow: 0 0 12px var(--green); }
+    main { max-width: 1500px; margin: auto; padding: 28px 4% 44px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(340px, .55fr); gap: 22px; }
+    .camera-card, .info-card {
+      border: 1px solid rgba(153, 203, 222, .12);
+      border-radius: 22px;
+      background: rgba(13, 37, 56, .88);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .22);
+    }
+    .camera-card { padding: 16px; }
+    .camera-header { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px 14px; }
+    .camera-header h1 { margin: 0; font-size: 20px; }
+    .status { color: var(--muted); font-size: 13px; }
+    .status.detected { color: var(--green-soft); }
+    .camera-wrap {
+      position: relative; overflow: hidden; min-height: 480px;
+      border-radius: 15px; background: #02090f;
+      border: 1px solid rgba(85, 168, 239, .14);
+    }
+    .camera-wrap img { width: 100%; height: 100%; min-height: 480px; object-fit: cover; display: block; }
+    .scan-line {
+      position: absolute; left: 8%; right: 8%; height: 2px;
+      top: 20%; background: linear-gradient(90deg, transparent, var(--green), transparent);
+      box-shadow: 0 0 16px var(--green); opacity: .55;
+      animation: scan 4s ease-in-out infinite;
+    }
+    @keyframes scan { 0%,100% { top: 18%; } 50% { top: 82%; } }
+    .info-column { display: flex; flex-direction: column; gap: 14px; }
+    .medicine-title { padding: 20px; border-bottom: 1px solid rgba(153, 203, 222, .1); }
+    .medicine-title .eyebrow { color: var(--green); font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; }
+    .medicine-title h2 { margin: 8px 0 5px; font-size: 28px; }
+    .confidence { color: var(--blue); font-size: 13px; }
+    .details { padding: 4px 20px 20px; }
+    .detail {
+      display: grid; grid-template-columns: 34px 1fr; gap: 11px;
+      padding: 15px 0; border-bottom: 1px solid rgba(153, 203, 222, .08);
+    }
+    .detail:last-child { border-bottom: 0; }
+    .detail-icon {
+      width: 34px; height: 34px; border-radius: 10px;
+      display: grid; place-items: center;
+      background: rgba(85, 168, 239, .11); color: var(--blue);
+    }
+    .detail h3 { margin: 1px 0 5px; font-size: 14px; color: var(--green-soft); }
+    .detail p { margin: 0; color: #cadce5; line-height: 1.55; font-size: 14px; }
+    .safety {
+      padding: 14px 16px; border-radius: 14px;
+      background: rgba(69, 211, 161, .07);
+      border: 1px solid rgba(69, 211, 161, .15);
+      color: #b9d5c9; font-size: 12px; line-height: 1.5;
+    }
+    @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } .camera-wrap, .camera-wrap img { min-height: 360px; } }
+  </style>
 </head>
-<body style="text-align:center;">
-  <h2>YOLO Live Video Stream</h2>
-  <img src="{% url 'video_feed' %}" width="960" height="540" />
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-mark">✚</div>
+      <div><strong>MedScan</strong><span>Medicine intelligence</span></div>
+    </div>
+    <div class="live-badge"><span class="live-dot"></span>Camera online</div>
+  </header>
+
+  <main>
+    <div class="layout">
+      <section class="camera-card">
+        <div class="camera-header">
+          <h1>Live detection</h1>
+          <span id="status" class="status">Searching for medicine…</span>
+        </div>
+        <div class="camera-wrap">
+          <img src="{% url 'video_feed' %}" alt="Live medicine detection">
+          <div class="scan-line"></div>
+        </div>
+      </section>
+
+      <aside class="info-column">
+        <section class="info-card">
+          <div class="medicine-title">
+            <div class="eyebrow">Detected medicine</div>
+            <h2 id="medicine-name">No medicine detected</h2>
+            <span id="confidence" class="confidence">Waiting for a clear view</span>
+          </div>
+          <div class="details">
+            <div class="detail">
+              <div class="detail-icon">F</div>
+              <div><h3>Family</h3><p id="family">Position the medication clearly inside the camera frame.</p></div>
+            </div>
+            <div class="detail">
+              <div class="detail-icon">R</div>
+              <div><h3>Role</h3><p id="role">Information will appear after detection.</p></div>
+            </div>
+            <div class="detail">
+              <div class="detail-icon">M</div>
+              <div><h3>Diseases treated</h3><p id="diseases">Waiting for recognition.</p></div>
+            </div>
+            <div class="detail">
+              <div class="detail-icon">U</div>
+              <div><h3>How to use</h3><p id="usage">Always use according to the package leaflet or a healthcare professional.</p></div>
+            </div>
+          </div>
+        </section>
+        <div class="safety">⚕️ Medical information is provided for support only. It does not replace professional diagnosis or advice.</div>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    async function refreshDetection() {
+      try {
+        const response = await fetch("{% url 'detection_info' %}", { cache: "no-store" });
+        const data = await response.json();
+
+        if (!data.name) return;
+
+        document.getElementById("medicine-name").textContent = data.name;
+        document.getElementById("confidence").textContent = data.confidence + "% confidence";
+        document.getElementById("family").textContent = data.family;
+        document.getElementById("role").textContent = data.role;
+        document.getElementById("diseases").textContent = data.diseases;
+        document.getElementById("usage").textContent = data.usage;
+        document.getElementById("status").textContent = "Medicine detected";
+        document.getElementById("status").classList.add("detected");
+      } catch (error) {
+        document.getElementById("status").textContent = "Reconnecting…";
+      }
+    }
+
+    refreshDetection();
+    setInterval(refreshDetection, 700);
+  </script>
 </body>
 </html>
