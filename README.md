@@ -4,9 +4,9 @@ MedScan is a Django and YOLO-based medicine detection application. It uses a web
 
 ## 20-second Demo
 
-[![Download and watch the MedScan demo](demo/medscan-demo2-20s.mp4)](demo/medscan-demo2-20s.mp4)
-
-A direct demo video is also available at: [`demo/medscan-demo2-20s.mp4`](demo/medscan-demo2-20s.mp4)
+<p align="center">
+  <img src="demo/medscan-demo.gif" alt="MedScan live medicine detection demo" width="960">
+</p>
 
 ## Features
 
